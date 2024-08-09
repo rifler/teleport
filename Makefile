@@ -406,6 +406,15 @@ $(BUILDDIR)/fdpass-teleport:
 	cd tool/fdpass-teleport && cargo build --release --locked $(CARGO_TARGET)
 	install tool/fdpass-teleport/target/$(RUST_TARGET_ARCH)/release/fdpass-teleport $(BUILDDIR)/
 
+.PHONY: tctl-app
+tsh-app: TCTL_APP_BUNDLE = $(BUILDDIR)/tctl.app
+tsh-app: TCTL_APP_ENTITLEMENTS = build.assets/macos/$(TCTL_SKELETON)/tctl.entitlements
+tsh-app:
+	cp -rf "build.assets/macos/$(TCTL_SKELETON)/tctl.app/" "$(TCTL_APP_BUNDLE)/"
+	mkdir -p "$(TCTL_APP_BUNDLE)/Contents/MacOS/"
+	cp "$(BUILDDIR)/tctl" "$(TCTL_APP_BUNDLE)/Contents/MacOS/."
+	$(NOTARIZE_TCTL_APP)
+
 #
 # BPF support (IF ENABLED)
 # Requires a recent version of clang and libbpf installed.

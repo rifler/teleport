@@ -77,6 +77,16 @@ func IsSystemResource(r Resource) bool {
 	return false
 }
 
+// IsInternalPresetResource checks to see if the given resource is considered
+// part of the teleport system, as opposed to some user created resource.
+func IsInternalPresetResource(r Resource) bool {
+	metadata := r.GetMetadata()
+	if t, ok := metadata.Labels[TeleportInternalResourceType]; ok {
+		return t == PresetResource
+	}
+	return false
+}
+
 // GetName fetches the name of the supplied resource. Useful when sorting lists
 // of resources or building maps, etc.
 func GetName[R Resource](r R) string {

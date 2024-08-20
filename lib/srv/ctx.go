@@ -106,6 +106,9 @@ type AccessPoint interface {
 	// GetRole returns role by name
 	GetRole(ctx context.Context, name string) (types.Role, error)
 
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
+
 	// GetCertAuthorities returns a list of cert authorities
 	GetCertAuthorities(ctx context.Context, caType types.CertAuthType, loadKeys bool) ([]types.CertAuthority, error)
 

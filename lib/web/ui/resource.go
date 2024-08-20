@@ -41,6 +41,8 @@ type ResourceItem struct {
 	Description string `json:"description,omitempty"`
 	// Content is resource yaml content.
 	Content string `json:"content"`
+	// Immutable indicates the resource cannot be modified
+	Immutable bool `json:"immutable"`
 }
 
 // NewResourceItem creates UI objects for a resource.
@@ -48,6 +50,12 @@ func NewResourceItem(resource types.Resource) (*ResourceItem, error) {
 	data, err := yaml.Marshal(resource)
 	if err != nil {
 		return nil, trace.Wrap(err)
+	}
+
+	immutable := false
+	_, ok := resource.GetMetadata().Labels[types.TeleportImmutableResource]
+	if ok {
+		immutable = true
 	}
 
 	kind := resource.GetKind()
@@ -60,8 +68,8 @@ func NewResourceItem(resource types.Resource) (*ResourceItem, error) {
 		Name:        name,
 		Description: description,
 		Content:     string(data[:]),
+		Immutable:   immutable,
 	}, nil
-
 }
 
 // NewRoles creates resource item for each role.

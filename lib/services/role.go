@@ -848,6 +848,8 @@ func ReadNoSecrets() []string {
 type RoleGetter interface {
 	// GetRole returns role by name
 	GetRole(ctx context.Context, name string) (types.Role, error)
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
 }
 
 // ExtractFromCertificate will extract roles and traits from a *ssh.Certificate.

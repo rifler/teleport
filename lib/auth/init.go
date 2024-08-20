@@ -960,6 +960,8 @@ type PresetRoleManager interface {
 	CreateRole(ctx context.Context, role types.Role) (types.Role, error)
 	// UpsertRole creates or updates a role and emits a related audit event.
 	UpsertRole(ctx context.Context, role types.Role) (types.Role, error)
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
 }
 
 // GetPresetRoles returns a list of all preset roles expected to be available on
@@ -968,6 +970,7 @@ func GetPresetRoles() []types.Role {
 	presets := []types.Role{
 		services.NewPresetGroupAccessRole(),
 		services.NewPresetEditorRole(),
+		services.NewPresetOwnerRole(),
 		services.NewPresetAccessRole(),
 		services.NewPresetAuditorRole(),
 		services.NewPresetReviewerRole(),
@@ -1006,6 +1009,17 @@ func createPresetRoles(ctx context.Context, rm PresetRoleManager) error {
 				// System resources *always* get reset on every auth startup
 				if _, err := rm.UpsertRole(gctx, role); err != nil {
 					return trace.Wrap(err, "failed upserting system role %s", role.GetName())
+				}
+
+				return nil
+			}
+
+			labels := role.GetAllLabels()
+			_, ok := labels[types.TeleportImmutableResource]
+			if ok && types.IsInternalPresetResource(role) {
+				// Immutable preset resources *always* get reset on every auth startup
+				if _, err := rm.UpsertRole(gctx, role); err != nil {
+					return trace.Wrap(err, "failed upserting immutable preset role %s", role.GetName())
 				}
 
 				return nil

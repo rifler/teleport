@@ -55,6 +55,8 @@ type Access interface {
 	GetRole(ctx context.Context, name string) (types.Role, error)
 	// DeleteRole deletes role by name.
 	DeleteRole(ctx context.Context, name string) error
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
 
 	LockGetter
 	// UpsertLock upserts a lock.

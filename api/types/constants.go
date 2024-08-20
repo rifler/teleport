@@ -987,6 +987,16 @@ const (
 	//           but user changes to these resources will be preserved.
 	TeleportInternalResourceType = TeleportInternalLabelPrefix + "resource-type"
 
+	// TeleportImmutableResource indicates the Teleport resource is immutable
+	// Any value is valid, the presence of the key indicates immutable
+	TeleportImmutableResource = TeleportInternalLabelPrefix + "immutable"
+
+	// TeleportMinimumAssignment indicates the Teleport resource must be assigned to a minimum number of members
+	// Valid values are:
+	// - 0: Default, no minimum
+	// - >0: Minimum
+	TeleportMinimumAssignment = TeleportInternalLabelPrefix + "minimum-assignment"
+
 	// TeleportResourceRevision marks a teleport-managed resource with a reversion
 	// number to aid future migrations. Label value is expected to be a number.
 	TeleportResourceRevision = TeleportInternalLabelPrefix + "revision"

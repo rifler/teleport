@@ -1770,6 +1770,11 @@ func (c *Client) GetRole(ctx context.Context, name string) (types.Role, error) {
 	return role, nil
 }
 
+func (c *Client) CountUsersWithRole(ctx context.Context, role types.Role) (int64, error) {
+	//TODO mberg implement me
+	panic("implement me")
+}
+
 // GetRoles returns a list of roles
 func (c *Client) GetRoles(ctx context.Context) ([]types.Role, error) {
 	var roles []types.Role
@@ -1850,6 +1855,12 @@ func (c *Client) CreateRole(ctx context.Context, role types.Role) (types.Role, e
 		return nil, trace.BadParameter("invalid type %T", role)
 	}
 
+	requestLabels := r.GetAllLabels()
+	l, ok := requestLabels[types.TeleportImmutableResource]
+	if ok {
+		return nil, trace.BadParameter("UpsertRole failed, cannot add label %v", l)
+	}
+
 	created, err := c.grpc.CreateRole(ctx, &proto.CreateRoleRequest{Role: r})
 	return created, trace.Wrap(err)
 }
@@ -1861,6 +1872,22 @@ func (c *Client) UpdateRole(ctx context.Context, role types.Role) (types.Role, e
 		return nil, trace.BadParameter("invalid type %T", role)
 	}
 
+	existingRole, err := c.grpc.GetRole(ctx, &proto.GetRoleRequest{Name: role.GetName()})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	labels := existingRole.GetAllLabels()
+	l, ok := labels[types.TeleportImmutableResource]
+	if ok {
+		return nil, trace.BadParameter("Cannot update role with label %v", l)
+	}
+
+	requestLabels := role.GetAllLabels()
+	l, ok = requestLabels[types.TeleportImmutableResource]
+	if ok {
+		return nil, trace.BadParameter("Update role failed, cannot add label %v", l)
+	}
+
 	updated, err := c.grpc.UpdateRole(ctx, &proto.UpdateRoleRequest{Role: r})
 	return updated, trace.Wrap(err)
 }
@@ -1870,6 +1897,22 @@ func (c *Client) UpsertRole(ctx context.Context, role types.Role) (types.Role, e
 	r, ok := role.(*types.RoleV6)
 	if !ok {
 		return nil, trace.BadParameter("invalid type %T", role)
+	}
+
+	existingRole, err := c.grpc.GetRole(ctx, &proto.GetRoleRequest{Name: role.GetName()})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	labels := existingRole.GetAllLabels()
+	l, ok := labels[types.TeleportImmutableResource]
+	if ok {
+		return nil, trace.BadParameter("Cannot upsert role with label %v", l)
+	}
+
+	requestLabels := role.GetAllLabels()
+	l, ok = requestLabels[types.TeleportImmutableResource]
+	if ok {
+		return nil, trace.BadParameter("UpsertRole failed, cannot add label %v", l)
 	}
 
 	upserted, err := c.grpc.UpsertRoleV2(ctx, &proto.UpsertRoleRequest{Role: r})
@@ -1892,7 +1935,18 @@ func (c *Client) DeleteRole(ctx context.Context, name string) error {
 	if name == "" {
 		return trace.BadParameter("missing name")
 	}
-	_, err := c.grpc.DeleteRole(ctx, &proto.DeleteRoleRequest{Name: name})
+
+	r, err := c.grpc.GetRole(ctx, &proto.GetRoleRequest{Name: name})
+	if err != nil {
+		return trace.BadParameter("Role %v not found", name)
+	}
+	labels := r.GetAllLabels()
+	l, ok := labels[types.TeleportImmutableResource]
+	if ok {
+		return trace.BadParameter("Cannot delete role with label %v", l)
+	}
+
+	_, err = c.grpc.DeleteRole(ctx, &proto.DeleteRoleRequest{Name: name})
 	return trace.Wrap(err)
 }
 

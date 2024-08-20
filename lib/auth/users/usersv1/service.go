@@ -20,6 +20,7 @@ package usersv1
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
@@ -47,6 +48,8 @@ type Cache interface {
 	ListUsers(ctx context.Context, req *userspb.ListUsersRequest) (*userspb.ListUsersResponse, error)
 	// GetRole returns a role by name.
 	GetRole(ctx context.Context, name string) (types.Role, error)
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
 }
 
 // Backend is the subset of the backend resources that the Service modifies.
@@ -323,6 +326,10 @@ func (s *Service) UpdateUser(ctx context.Context, req *userspb.UpdateUserRequest
 		omitEditorEvent = true
 	}
 
+	if err := services.ValidateRoleChangesWithMinimums(ctx, prevUser, req.User, s.cache); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	if prevUser != nil {
 		// Preserve the users' created by information.
 		req.User.SetCreatedBy(prevUser.GetCreatedBy())
@@ -409,6 +416,10 @@ func (s *Service) UpsertUser(ctx context.Context, req *userspb.UpsertUserRequest
 		omitEditorEvent = true
 	}
 
+	if err := services.ValidateRoleChangesWithMinimums(ctx, prevUser, req.User, s.cache); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	verb := types.VerbUpdate
 	if prevUser == nil {
 		verb = types.VerbCreate
@@ -485,8 +496,34 @@ func (s *Service) DeleteUser(ctx context.Context, req *userspb.DeleteUserRequest
 		omitEditorEvent = true
 	}
 
-	if err = okta.CheckAccess(authCtx, prevUser, types.VerbDelete); err != nil {
-		return nil, trace.Wrap(err)
+	roles := prevUser.GetRoles()
+	for _, role := range roles {
+		r, err := s.cache.GetRole(ctx, role)
+		if err != nil {
+			return &emptypb.Empty{}, trace.Wrap(err)
+		}
+
+		labels := r.GetAllLabels()
+		label, ok := labels[types.TeleportMinimumAssignment]
+		if ok {
+			// check minimum if the count is valid
+			// get the count of users with the role
+			count, err := s.cache.CountUsersWithRole(ctx, r)
+			if err != nil {
+				return &emptypb.Empty{}, trace.Wrap(err)
+			}
+
+			// convert the label string to the minimum value
+			minimum, err := strconv.ParseInt(label, 10, 64)
+			if err != nil {
+				return &emptypb.Empty{}, trace.Wrap(err)
+			}
+
+			// check if we decrease this count by 1, will the number of assigned drop below the minimum value
+			if count-1 < minimum {
+				return &emptypb.Empty{}, trace.BadParameter("Unable to remove role %v from user %v as this violates the minimum role assignment", r.GetName(), user.GetName())
+			}
+		}
 	}
 
 	role, err := s.cache.GetRole(ctx, services.RoleNameForUser(req.Name))

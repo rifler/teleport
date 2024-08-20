@@ -23,6 +23,7 @@ export type Resource<T extends Kind> = {
   description?: string;
   // content is config in yaml format.
   content: string;
+  immutable?: boolean;
 };
 
 export type KindRole = 'role';

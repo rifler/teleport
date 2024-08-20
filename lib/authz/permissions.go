@@ -168,6 +168,9 @@ type AuthorizerAccessPoint interface {
 	// GetRole returns role by name.
 	GetRole(ctx context.Context, name string) (types.Role, error)
 
+	// CountUsersWithRole returns the count of users with a given role
+	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
+
 	// GetUser returns user by name.
 	GetUser(ctx context.Context, name string, withSecrets bool) (types.User, error)
 

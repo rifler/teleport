@@ -185,6 +185,7 @@ export function Roles(props: State) {
           onClose={resources.disregard}
           directions={<Directions />}
           kind={resources.item.kind}
+          immutable={resources.item.immutable}
         />
       )}
       {resources.status === 'removing' && (

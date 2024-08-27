@@ -22,7 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
+	"slices"
 	"strconv"
 	"time"
 
@@ -69,7 +69,7 @@ func ValidateRoleChangesWithMinimums(ctx context.Context, user, req types.User, 
 	userRoles := user.GetRoles()
 	requestRoles := req.GetRoles()
 
-	if reflect.DeepEqual(userRoles, requestRoles) {
+	if slices.Equal(userRoles, requestRoles) {
 		// no change in roles, nothing to verify - continue
 		return nil
 	}
@@ -99,20 +99,19 @@ func ValidateRoleChangesWithMinimums(ctx context.Context, user, req types.User, 
 			// previously assigned role with minimum is not in the request and will be removed
 			// check if the count is valid
 			if !found {
-				// get the count of users with the role
-				count, err := roleGetter.CountUsersWithRole(ctx, r)
-				if err != nil {
-					return trace.Wrap(err)
-				}
-
 				// convert the label string to the minimum value
 				minimum, err := strconv.ParseInt(label, 10, 64)
 				if err != nil {
 					return trace.Wrap(err)
 				}
 
+				// check to see if the role can be removed without breaking the minimum assignment requirement
+				ok, err := roleGetter.VerifyMinimumRoleRemoval(ctx, r, minimum)
+				if err != nil {
+					return trace.Wrap(err)
+				}
 				// check if we decrease this count by 1, will the number of assigned drop below the minimum value
-				if count-1 < minimum {
+				if !ok {
 					return trace.BadParameter("Unable to remove role %v from user %v as this violates the minimum role assignment", r.GetName(), user.GetName())
 				}
 			}

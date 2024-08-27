@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"net"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1770,7 +1771,7 @@ func (c *Client) GetRole(ctx context.Context, name string) (types.Role, error) {
 	return role, nil
 }
 
-func (c *Client) CountUsersWithRole(ctx context.Context, role types.Role) (int64, error) {
+func (c *Client) VerifyMinimumRoleRemoval(ctx context.Context, role types.Role, min int64) (bool, error) {
 	//TODO mberg implement me
 	panic("implement me")
 }
@@ -1856,9 +1857,11 @@ func (c *Client) CreateRole(ctx context.Context, role types.Role) (types.Role, e
 	}
 
 	requestLabels := r.GetAllLabels()
-	l, ok := requestLabels[types.TeleportImmutableResource]
-	if ok {
-		return nil, trace.BadParameter("UpsertRole failed, cannot add label %v", l)
+	for k, _ := range requestLabels {
+		if strings.HasPrefix(k, types.TeleportRestrictedLabelPrefix) {
+			return nil, trace.BadParameter("UpsertRole failed, cannot add restricted label %v", k)
+
+		}
 	}
 
 	created, err := c.grpc.CreateRole(ctx, &proto.CreateRoleRequest{Role: r})
@@ -1876,16 +1879,25 @@ func (c *Client) UpdateRole(ctx context.Context, role types.Role) (types.Role, e
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
 	labels := existingRole.GetAllLabels()
 	l, ok := labels[types.TeleportImmutableResource]
 	if ok {
-		return nil, trace.BadParameter("Cannot update role with label %v", l)
+		// skip error check, error represents an invalid state for the label; treat it as if the label is not applied
+		set, _ := strconv.ParseBool(l)
+		if set {
+			return nil, trace.BadParameter("Cannot update role with label %v", l)
+		}
 	}
 
 	requestLabels := role.GetAllLabels()
 	l, ok = requestLabels[types.TeleportImmutableResource]
 	if ok {
-		return nil, trace.BadParameter("Update role failed, cannot add label %v", l)
+		// skip error check, error represents an invalid state for the label; treat it as if the label is not applied
+		set, _ := strconv.ParseBool(l)
+		if set {
+			return nil, trace.BadParameter("Update role failed, cannot add label %v", l)
+		}
 	}
 
 	updated, err := c.grpc.UpdateRole(ctx, &proto.UpdateRoleRequest{Role: r})
@@ -1906,11 +1918,17 @@ func (c *Client) UpsertRole(ctx context.Context, role types.Role) (types.Role, e
 	labels := existingRole.GetAllLabels()
 	l, ok := labels[types.TeleportImmutableResource]
 	if ok {
-		return nil, trace.BadParameter("Cannot upsert role with label %v", l)
+		// skip error check, error represents an invalid state for the label; treat it as if the label is not applied
+		set, _ := strconv.ParseBool(l)
+		if set {
+			return nil, trace.BadParameter("Cannot upsert role with label %v", l)
+		}
 	}
 
+	// todo mberg convo with alan should this be a new prefix and we dont' allow adding?
 	requestLabels := role.GetAllLabels()
 	l, ok = requestLabels[types.TeleportImmutableResource]
+	// todo mberg no need to check the parse the bool and check the value, we don't allow adding this in any state valid or non
 	if ok {
 		return nil, trace.BadParameter("UpsertRole failed, cannot add label %v", l)
 	}

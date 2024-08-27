@@ -83,8 +83,8 @@ func (s *AccessService) GetRoles(ctx context.Context) ([]types.Role, error) {
 	return roles, nil
 }
 
-// CountUsersWithRole returns the count of users with a given role
-func (s *AccessService) CountUsersWithRole(ctx context.Context, role types.Role) (int64, error) {
+// VerifyMinimumRoleRemoval returns true if it is safe to remove a role with a minimum requirement
+func (s *AccessService) VerifyMinimumRoleRemoval(ctx context.Context, role types.Role, min int64) (bool, error) {
 	//TODO mberg implement me
 	panic("implement me")
 }

@@ -23,8 +23,9 @@ export type Resource<T extends Kind> = {
   description?: string;
   // content is config in yaml format.
   content: string;
-  immutable?: boolean;
+  labels?: Map<string, string>
 };
+
 
 export type KindRole = 'role';
 export type KindTrustedCluster = 'trusted_cluster';

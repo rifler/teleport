@@ -48,8 +48,8 @@ type Cache interface {
 	ListUsers(ctx context.Context, req *userspb.ListUsersRequest) (*userspb.ListUsersResponse, error)
 	// GetRole returns a role by name.
 	GetRole(ctx context.Context, name string) (types.Role, error)
-	// CountUsersWithRole returns the count of users with a given role
-	CountUsersWithRole(ctx context.Context, role types.Role) (int64, error)
+	// VerifyMinimumRoleRemoval returns true if it is safe to remove a role with a minimum requirement
+	VerifyMinimumRoleRemoval(ctx context.Context, role types.Role, min int64) (bool, error)
 }
 
 // Backend is the subset of the backend resources that the Service modifies.
@@ -506,22 +506,21 @@ func (s *Service) DeleteUser(ctx context.Context, req *userspb.DeleteUserRequest
 		labels := r.GetAllLabels()
 		label, ok := labels[types.TeleportMinimumAssignment]
 		if ok {
-			// check minimum if the count is valid
-			// get the count of users with the role
-			count, err := s.cache.CountUsersWithRole(ctx, r)
-			if err != nil {
-				return &emptypb.Empty{}, trace.Wrap(err)
-			}
-
 			// convert the label string to the minimum value
 			minimum, err := strconv.ParseInt(label, 10, 64)
 			if err != nil {
 				return &emptypb.Empty{}, trace.Wrap(err)
 			}
 
+			// check to see if the role can be removed without breaking the minimum assignment requirement
+			ok, err := s.cache.VerifyMinimumRoleRemoval(ctx, r, minimum)
+			if err != nil {
+				return &emptypb.Empty{}, trace.Wrap(err)
+			}
+
 			// check if we decrease this count by 1, will the number of assigned drop below the minimum value
-			if count-1 < minimum {
-				return &emptypb.Empty{}, trace.BadParameter("Unable to remove role %v from user %v as this violates the minimum role assignment", r.GetName(), user.GetName())
+			if !ok {
+				return &emptypb.Empty{}, trace.BadParameter("Unable to remove role %v from user %v as this violates the minimum role assignment", r.GetName(), prevUser.GetName())
 			}
 		}
 	}

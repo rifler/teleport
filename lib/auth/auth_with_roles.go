@@ -4386,7 +4386,7 @@ func (a *ServerWithRoles) ListRoles(ctx context.Context, req *proto.ListRolesReq
 	}, nil
 }
 
-func (a *ServerWithRoles) CountUsersWithRole(ctx context.Context, role types.Role) (int64, error) {
+func (a *ServerWithRoles) VerifyMinimumRoleRemoval(ctx context.Context, role types.Role, min int64) (bool, error) {
 	//TODO mberg implement me
 	panic("implement me")
 }

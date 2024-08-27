@@ -185,7 +185,7 @@ export function Roles(props: State) {
           onClose={resources.disregard}
           directions={<Directions />}
           kind={resources.item.kind}
-          immutable={resources.item.immutable}
+          immutable={!!resources.item.labels["teleport.internal/immutable"]} // todo mberg
         />
       )}
       {resources.status === 'removing' && (

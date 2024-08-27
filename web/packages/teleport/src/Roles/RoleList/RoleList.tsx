@@ -69,7 +69,7 @@ export function RoleList({
           altKey: 'options-btn',
           render: (role: RoleResource) => (
             <ActionCell
-              immutable={role.immutable}
+              immutable={false} // todo mberg
               onEdit={() => onEdit(role.id)}
               onDelete={() => onDelete(role.id)}
             />

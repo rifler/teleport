@@ -69,6 +69,12 @@ type AuditEvent interface {
 	GetClusterName() string
 	// SetClusterName sets the name of the teleport cluster on the event.
 	SetClusterName(string)
+
+	// TrimToMaxSize returns a copy of the event trimmed to a smaller
+	// size. The desired size may not be achievable so callers
+	// should always check the size of the returned event before
+	// using it.
+	TrimToMaxSize(maxSize int) AuditEvent
 }
 
 // Emitter emits audit events.

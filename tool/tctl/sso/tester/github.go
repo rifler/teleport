@@ -48,7 +48,8 @@ func githubTest(c *authclient.Client, connector types.GithubConnector) (*AuthReq
 		ghRequest := types.GithubAuthRequest{
 			ConnectorID:       req.ConnectorID + "-" + connector.GetName(),
 			Type:              constants.Github,
-			PublicKey:         req.PublicKey,
+			SshPublicKey:      req.SSHPubKey,
+			TlsPublicKey:      req.TLSPubKey,
 			CertTTL:           defaults.GithubAuthRequestTTL,
 			CreateWebSession:  false,
 			ClientRedirectURL: req.RedirectURL,
